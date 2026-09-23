@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AuthEnv } from "../middleware/auth";
-import { getOrCreatePrayerDay, setPrayerState, type PrayerName } from "../db/prayerDayRepo";
+import { getOrCreatePrayerDay, setPrayerState, listPrayerDaysInRange, type PrayerName } from "../db/prayerDayRepo";
 import { recomputePeriodStats } from "../db/userPeriodStatsRepo";
 import { isLocked } from "../services/deadlineService";
 import { findUserById } from "../db/userRepo";
@@ -15,6 +15,17 @@ function isFutureDate(dateStr: string): boolean {
 }
 
 export const prayerDayRoutes = new Hono<AuthEnv>();
+
+prayerDayRoutes.get("/", async (c) => {
+  const from = c.req.query("from");
+  const to = c.req.query("to");
+  if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to)) {
+    return c.json({ error: "from and to (YYYY-MM-DD) are required" }, 400);
+  }
+
+  const days = await listPrayerDaysInRange(c.env.DB, c.get("userId"), from, to);
+  return c.json(days);
+});
 
 prayerDayRoutes.put("/:date/exempt", async (c) => {
   const date = c.req.param("date");

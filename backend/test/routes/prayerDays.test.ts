@@ -90,6 +90,39 @@ describe("PUT /api/prayer-days/:date/:prayer", () => {
   });
 });
 
+describe("GET /api/prayer-days", () => {
+  test("returns days within from/to range", async () => {
+    const { token } = await authedUser();
+    const app = buildApp();
+
+    await app.request(`/api/prayer-days/${today()}/fajr`, { method: "PUT", headers: authHeaders(token) }, env);
+
+    const res = await app.request(
+      `/api/prayer-days?from=${today()}&to=${today()}`,
+      { headers: authHeaders(token) },
+      env,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ prayer_date: string; fajr: number }[]>();
+    expect(body).toHaveLength(1);
+    expect(body[0].fajr).toBe(1);
+  });
+
+  test("400 when from/to missing", async () => {
+    const { token } = await authedUser();
+    const app = buildApp();
+    const res = await app.request("/api/prayer-days", { headers: authHeaders(token) }, env);
+    expect(res.status).toBe(400);
+  });
+
+  test("401 without auth", async () => {
+    const app = buildApp();
+    const res = await app.request(`/api/prayer-days?from=${today()}&to=${today()}`, {}, env);
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("PUT /api/prayer-days/:date/exempt", () => {
   test("marks all five prayers exempt", async () => {
     const { token } = await authedUser();
