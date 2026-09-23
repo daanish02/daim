@@ -1,0 +1,20 @@
+name = "daim-backend"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "daim"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "../migrations"
+
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "daim_events"
+
+[triggers]
+crons = ["0 0 * * *"]
+
+[vars]
+GOOGLE_CLIENT_ID = "REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID"
