@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { env } from "cloudflare:test";
 import { ensureMigrated } from "../helpers/migrate";
 import { upsertUserByGoogleId } from "../../src/db/userRepo";
-import { getOrCreatePrayerDay, setPrayerState } from "../../src/db/prayerDayRepo";
+import { getOrCreatePrayerDay, setPrayerState, listPrayerDaysInRange } from "../../src/db/prayerDayRepo";
 
 beforeEach(async () => {
   await ensureMigrated(env.DB);
@@ -58,5 +58,26 @@ describe("setPrayerState", () => {
     const updated = await setPrayerState(env.DB, user.id, "2026-03-11", "isha", null);
 
     expect(updated.isha).toBeNull();
+  });
+});
+
+describe("listPrayerDaysInRange", () => {
+  test("returns rows within [from, to] inclusive, ordered by date", async () => {
+    const user = await makeUser();
+    await getOrCreatePrayerDay(env.DB, user.id, "2026-03-10", "UTC");
+    await getOrCreatePrayerDay(env.DB, user.id, "2026-03-12", "UTC");
+    await getOrCreatePrayerDay(env.DB, user.id, "2026-03-15", "UTC"); // outside range
+    await setPrayerState(env.DB, user.id, "2026-03-10", "fajr", 1);
+
+    const days = await listPrayerDaysInRange(env.DB, user.id, "2026-03-10", "2026-03-12");
+
+    expect(days.map((d) => d.prayer_date)).toEqual(["2026-03-10", "2026-03-12"]);
+    expect(days[0].fajr).toBe(1);
+  });
+
+  test("returns empty array when nothing in range", async () => {
+    const user = await upsertUserByGoogleId(env.DB, { googleId: "g-2", displayName: "Bob", timezone: "UTC" });
+    const days = await listPrayerDaysInRange(env.DB, user.id, "2026-01-01", "2026-01-31");
+    expect(days).toEqual([]);
   });
 });

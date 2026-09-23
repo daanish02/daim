@@ -60,6 +60,20 @@ export async function getOrCreatePrayerDay(
   };
 }
 
+/** Rows for a user within [from, to] inclusive, ordered by date ascending. */
+export async function listPrayerDaysInRange(
+  db: D1Database,
+  userId: string,
+  from: string,
+  to: string,
+): Promise<PrayerDay[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM prayer_days WHERE user_id = ? AND prayer_date BETWEEN ? AND ? ORDER BY prayer_date ASC")
+    .bind(userId, from, to)
+    .all<PrayerDay>();
+  return results;
+}
+
 /**
  * Sets one prayer's value on an existing prayer_days row. Caller is
  * responsible for the deadline-lock check before calling this.
