@@ -1,11 +1,11 @@
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchHome, setPrayerState, type PrayerName, type PrayerValue } from "../../../services/api/home";
+import { fetchHome, setPrayerState, setDayExempt, type PrayerName, type PrayerValue } from "../../../services/api/home";
 import { PrayerRow } from "../../../components/PrayerRow";
 import { ContributionGraph } from "../../../components/ContributionGraph";
 import { ConsistencyGraph } from "../../../components/ConsistencyGraph";
-import { colors, spacing } from "../../../theme/tokens";
+import { colors, spacing, radii } from "../../../theme/tokens";
 
 const PRAYER_NAMES: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
@@ -17,6 +17,11 @@ export default function HomeScreen() {
   const mutation = useMutation({
     mutationFn: ({ prayer, value }: { prayer: PrayerName; value: PrayerValue }) =>
       setPrayerState(data!.today.prayer_date, prayer, value),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["home"] }),
+  });
+
+  const exemptMutation = useMutation({
+    mutationFn: () => setDayExempt(data!.today.prayer_date),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["home"] }),
   });
 
@@ -67,8 +72,19 @@ export default function HomeScreen() {
         {prayedCount} / 5 prayed
       </Text>
 
+      <Pressable
+        style={styles.exemptButton}
+        onPress={() => exemptMutation.mutate()}
+        disabled={exemptMutation.isPending}
+      >
+        <Text style={styles.exemptButtonText}>Mark day as exempt</Text>
+      </Pressable>
+
       <Text style={styles.sectionLabel}>8-week contribution</Text>
-      <ContributionGraph days={data.contribution} />
+      <ContributionGraph
+        days={data.contribution}
+        onPressDay={(date) => router.push(`/day/${date}`)}
+      />
 
       <Text style={styles.sectionLabel}>4-week consistency</Text>
       <ConsistencyGraph weeks={data.consistency} />
@@ -115,7 +131,21 @@ const styles = StyleSheet.create({
   summary: {
     fontSize: 14,
     color: colors.muted,
+    marginBottom: spacing.md,
+  },
+  exemptButton: {
     marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.muted,
+    alignItems: "center",
+    alignSelf: "flex-start",
+  },
+  exemptButtonText: {
+    fontSize: 14,
+    color: colors.text,
   },
   sectionLabel: {
     fontSize: 13,
