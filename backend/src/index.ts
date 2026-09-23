@@ -3,6 +3,7 @@ import { authRoutes } from "./routes/auth";
 import { prayerDayRoutes } from "./routes/prayerDays";
 import { homeRoutes } from "./routes/home";
 import { leaderboardRoutes } from "./routes/leaderboard";
+import { meRoutes } from "./routes/me";
 import { authMiddleware, type AuthEnv } from "./middleware/auth";
 
 export interface Env {
@@ -21,6 +22,8 @@ app.use("/api/home", authMiddleware);
 app.route("/api/home", homeRoutes);
 app.use("/api/leaderboard", authMiddleware);
 app.route("/api/leaderboard", leaderboardRoutes);
+app.use("/api/me*", authMiddleware);
+app.route("/api/me", meRoutes);
 
 export default {
   fetch: app.fetch,
