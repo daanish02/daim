@@ -31,6 +31,40 @@ export async function findUserById(db: D1Database, id: string): Promise<User | n
   return row ?? null;
 }
 
+export interface UpdateUserProfileInput {
+  country?: string | null;
+  language?: string;
+  leaderboardVisible?: boolean;
+}
+
+/** Updates only the fields provided; others are left untouched. */
+export async function updateUserProfile(
+  db: D1Database,
+  userId: string,
+  input: UpdateUserProfileInput,
+): Promise<User> {
+  const current = await findUserById(db, userId);
+  if (!current) throw new Error("user not found");
+
+  const country = input.country !== undefined ? input.country : current.country;
+  const language = input.language !== undefined ? input.language : current.language;
+  const leaderboardVisible =
+    input.leaderboardVisible !== undefined ? (input.leaderboardVisible ? 1 : 0) : current.leaderboard_visible;
+  const now = new Date().toISOString();
+
+  await db
+    .prepare("UPDATE users SET country = ?, language = ?, leaderboard_visible = ?, updated_at = ? WHERE id = ?")
+    .bind(country, language, leaderboardVisible, now, userId)
+    .run();
+
+  return { ...current, country, language, leaderboard_visible: leaderboardVisible, updated_at: now };
+}
+
+/** Deletes the user; prayer_days/sessions/admin_users cascade via FK ON DELETE CASCADE. */
+export async function deleteUser(db: D1Database, userId: string): Promise<void> {
+  await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+}
+
 /**
  * Create the user on first Google sign-in, or refresh display_name on
  * repeat sign-in. Identity (google_id) never changes once created.

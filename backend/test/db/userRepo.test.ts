@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { env } from "cloudflare:test";
-import { upsertUserByGoogleId, findUserByGoogleId, findUserById } from "../../src/db/userRepo";
+import { upsertUserByGoogleId, findUserByGoogleId, findUserById, updateUserProfile, deleteUser } from "../../src/db/userRepo";
 import { ensureMigrated } from "../helpers/migrate";
 
 beforeEach(async () => {
@@ -58,5 +58,48 @@ describe("findUserById", () => {
     const created = await upsertUserByGoogleId(env.DB, { googleId: "g-4", displayName: "Dee", timezone: "UTC" });
     const found = await findUserById(env.DB, created.id);
     expect(found?.display_name).toBe("Dee");
+  });
+});
+
+describe("updateUserProfile", () => {
+  test("updates country, language, leaderboard_visible", async () => {
+    const user = await upsertUserByGoogleId(env.DB, { googleId: "g-5", displayName: "Eve", timezone: "UTC" });
+    const updated = await updateUserProfile(env.DB, user.id, {
+      country: "IN",
+      language: "ar",
+      leaderboardVisible: true,
+    });
+    expect(updated.country).toBe("IN");
+    expect(updated.language).toBe("ar");
+    expect(updated.leaderboard_visible).toBe(1);
+  });
+
+  test("partial update leaves other fields untouched", async () => {
+    const user = await upsertUserByGoogleId(env.DB, { googleId: "g-6", displayName: "Fay", timezone: "UTC" });
+    const updated = await updateUserProfile(env.DB, user.id, { country: "US" });
+    expect(updated.country).toBe("US");
+    expect(updated.language).toBe("en");
+  });
+});
+
+describe("deleteUser", () => {
+  test("removes the user row", async () => {
+    const user = await upsertUserByGoogleId(env.DB, { googleId: "g-7", displayName: "Gil", timezone: "UTC" });
+    await deleteUser(env.DB, user.id);
+    expect(await findUserById(env.DB, user.id)).toBeNull();
+  });
+
+  test("cascades to delete the user's prayer_days (FK ON DELETE CASCADE)", async () => {
+    const user = await upsertUserByGoogleId(env.DB, { googleId: "g-8", displayName: "Hana", timezone: "UTC" });
+    await env.DB.prepare(
+      `INSERT INTO prayer_days (id, user_id, prayer_date, timezone, deadline_at) VALUES (?, ?, '2026-03-11', 'UTC', '2026-03-13T23:59:59.000Z')`,
+    )
+      .bind(crypto.randomUUID(), user.id)
+      .run();
+
+    await deleteUser(env.DB, user.id);
+
+    const remaining = await env.DB.prepare("SELECT id FROM prayer_days WHERE user_id = ?").bind(user.id).first();
+    expect(remaining).toBeNull();
   });
 });
