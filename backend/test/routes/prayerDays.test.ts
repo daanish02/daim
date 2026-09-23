@@ -88,6 +88,47 @@ describe("PUT /api/prayer-days/:date/:prayer", () => {
     );
     expect(res.status).toBe(409);
   });
+
+  test("explicit value: -1 marks that single prayer exempt", async () => {
+    const { token } = await authedUser();
+    const app = buildApp();
+    const res = await app.request(
+      `/api/prayer-days/${today()}/asr`,
+      { method: "PUT", headers: { ...authHeaders(token), "Content-Type": "application/json" }, body: JSON.stringify({ value: -1 }) },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json<{ asr: number }>();
+    expect(body.asr).toBe(-1);
+  });
+
+  test("undo: value null resets an already-prayed prayer back to pending", async () => {
+    const { token } = await authedUser();
+    const app = buildApp();
+
+    await app.request(`/api/prayer-days/${today()}/isha`, { method: "PUT", headers: authHeaders(token) }, env);
+
+    const res = await app.request(
+      `/api/prayer-days/${today()}/isha`,
+      { method: "PUT", headers: { ...authHeaders(token), "Content-Type": "application/json" }, body: JSON.stringify({ value: null }) },
+      env,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ isha: number | null }>();
+    expect(body.isha).toBeNull();
+  });
+
+  test("400 for an invalid value", async () => {
+    const { token } = await authedUser();
+    const app = buildApp();
+    const res = await app.request(
+      `/api/prayer-days/${today()}/fajr`,
+      { method: "PUT", headers: { ...authHeaders(token), "Content-Type": "application/json" }, body: JSON.stringify({ value: 2 }) },
+      env,
+    );
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /api/prayer-days", () => {

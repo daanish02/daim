@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import type { AuthEnv } from "../middleware/auth";
-import { getOrCreatePrayerDay, setPrayerState, listPrayerDaysInRange, type PrayerName } from "../db/prayerDayRepo";
+import {
+  getOrCreatePrayerDay,
+  setPrayerState,
+  listPrayerDaysInRange,
+  type PrayerName,
+  type PrayerValue,
+} from "../db/prayerDayRepo";
 import { recomputePeriodStats } from "../db/userPeriodStatsRepo";
 import { isLocked } from "../services/deadlineService";
 import { findUserById } from "../db/userRepo";
@@ -12,6 +18,17 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function isFutureDate(dateStr: string): boolean {
   const today = new Date().toISOString().slice(0, 10);
   return dateStr > today;
+}
+
+const VALID_VALUES: PrayerValue[] = [1, -1, null];
+
+/** Parses the optional {value} body; defaults to 1 (prayed) for PUT-with-no-body clients. */
+async function parsePrayerValue(c: { req: { json: () => Promise<unknown> } }): Promise<PrayerValue | undefined> {
+  const body = await c.req.json().catch(() => ({}));
+  if (typeof body !== "object" || body === null || !("value" in body)) return 1;
+  const value = (body as { value: unknown }).value;
+  if (!VALID_VALUES.includes(value as PrayerValue)) return undefined;
+  return value as PrayerValue;
 }
 
 export const prayerDayRoutes = new Hono<AuthEnv>();
@@ -60,10 +77,13 @@ prayerDayRoutes.put("/:date/:prayer", async (c) => {
   const user = await findUserById(c.env.DB, userId);
   if (!user) return c.json({ error: "user not found" }, 404);
 
+  const value = await parsePrayerValue(c);
+  if (value === undefined) return c.json({ error: "invalid value - must be 1, -1, or null" }, 400);
+
   const day = await getOrCreatePrayerDay(c.env.DB, userId, date, user.timezone);
   if (isLocked(day.deadline_at)) return c.json({ error: "editing window closed" }, 409);
 
-  const updated = await setPrayerState(c.env.DB, userId, date, prayer, 1);
+  const updated = await setPrayerState(c.env.DB, userId, date, prayer, value);
   await recomputePeriodStats(c.env.DB, userId, date);
 
   return c.json(updated);
