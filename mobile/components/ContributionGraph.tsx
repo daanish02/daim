@@ -1,4 +1,4 @@
-import { View, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import type { PrayerDay } from "../services/api/home";
 import { colors, spacing, radii } from "../theme/tokens";
 
@@ -21,19 +21,26 @@ const LEVEL_COLORS = [
 
 interface ContributionGraphProps {
   days: PrayerDay[];
+  onPressDay?: (date: string) => void;
 }
 
-/** GitHub-style 8-week (56-day) contribution grid. Purely for personal feedback. */
-export function ContributionGraph({ days }: ContributionGraphProps) {
+/**
+ * GitHub-style 8-week (56-day) contribution grid. Purely for personal
+ * feedback. Tapping a square opens that day (PRD #7: "Tapping a day opens
+ * its prayers and allows editing if the editing window is still open").
+ */
+export function ContributionGraph({ days, onPressDay }: ContributionGraphProps) {
   return (
     <View style={styles.grid}>
       {days.map((day) => {
         const count = prayedCount(day);
         return (
-          <View
+          <Pressable
             key={day.prayer_date}
             testID={`contribution-square-${day.prayer_date}`}
             accessibilityLabel={`${day.prayer_date}: ${count}/5`}
+            accessibilityRole={onPressDay ? "button" : undefined}
+            onPress={onPressDay ? () => onPressDay(day.prayer_date) : undefined}
             style={[styles.square, { backgroundColor: LEVEL_COLORS[count] }]}
           />
         );

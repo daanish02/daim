@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { render, fireEvent } from "@testing-library/react-native";
 import { ContributionGraph } from "./ContributionGraph";
 import type { PrayerDay } from "../services/api/home";
 
@@ -28,5 +28,13 @@ describe("ContributionGraph", () => {
     const days = [makeDay("2026-03-11", 0)];
     const { getByTestId } = await render(<ContributionGraph days={days} />);
     expect(getByTestId("contribution-square-2026-03-11").props.accessibilityLabel).toContain("0/5");
+  });
+
+  test("tapping a square calls onPressDay with that date", async () => {
+    const onPressDay = jest.fn();
+    const days = [makeDay("2026-03-11", 2)];
+    const { getByTestId } = await render(<ContributionGraph days={days} onPressDay={onPressDay} />);
+    fireEvent.press(getByTestId("contribution-square-2026-03-11"));
+    expect(onPressDay).toHaveBeenCalledWith("2026-03-11");
   });
 });
