@@ -33,22 +33,51 @@ function buildApp() {
 
 const authHeaders = (token: string) => ({ Authorization: `Bearer ${token}` });
 
+async function setStats(userId: string, points: number, eligible: number, periodKey: string) {
+  await env.DB.prepare(
+    `INSERT INTO user_period_stats (id, user_id, period_type, period_key, points, eligible_points, updated_at)
+     VALUES (?, ?, 'monthly', ?, ?, ?, ?)`,
+  )
+    .bind(crypto.randomUUID(), userId, periodKey, points, eligible, new Date().toISOString())
+    .run();
+}
+
+const thisMonthKey = () => new Date().toISOString().slice(0, 7);
+
 describe("GET /api/leaderboard", () => {
-  test("defaults to monthly period, points sort", async () => {
+  test("defaults to monthly period, points sort; response has entries and me", async () => {
     const { user, token } = await authedUser();
-    await env.DB.prepare(
-      `INSERT INTO user_period_stats (id, user_id, period_type, period_key, points, eligible_points, updated_at)
-       VALUES (?, ?, 'monthly', ?, 10, 10, ?)`,
-    )
-      .bind(crypto.randomUUID(), user.id, new Date().toISOString().slice(0, 7), new Date().toISOString())
-      .run();
+    await setStats(user.id, 10, 10, thisMonthKey());
 
     const app = buildApp();
     const res = await app.request("/api/leaderboard", { headers: authHeaders(token) }, env);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ display_name: string }[]>();
-    expect(body[0].display_name).toBe("Ada");
+    const body = await res.json<{ entries: { display_name: string }[]; me: { rank: number } | null }>();
+    expect(body.entries[0].display_name).toBe("Ada");
+    expect(body.me).toEqual({ rank: 1, points: 10, eligible_points: 10 });
+  });
+
+  test("me is null when the caller has no stats for the period", async () => {
+    const { token } = await authedUser();
+    const app = buildApp();
+    const res = await app.request("/api/leaderboard", { headers: authHeaders(token) }, env);
+    const body = await res.json<{ me: unknown }>();
+    expect(body.me).toBeNull();
+  });
+
+  test("supports limit and page query params", async () => {
+    const { user, token } = await authedUser();
+    await setStats(user.id, 300, 300, thisMonthKey());
+    const b = await upsertUserByGoogleId(env.DB, { googleId: "g-b", displayName: "Yusuf", timezone: "UTC" });
+    await env.DB.prepare("UPDATE users SET leaderboard_visible = 1 WHERE id = ?").bind(b.id).run();
+    await setStats(b.id, 200, 300, thisMonthKey());
+
+    const app = buildApp();
+    const res = await app.request("/api/leaderboard?limit=1&page=2", { headers: authHeaders(token) }, env);
+    const body = await res.json<{ entries: { display_name: string }[] }>();
+
+    expect(body.entries).toEqual([{ user_id: b.id, display_name: "Yusuf", points: 200, eligible_points: 300 }]);
   });
 
   test("400 for invalid period", async () => {
