@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchHome, setPrayerState, type PrayerName } from "../../../services/api/home";
+import { fetchHome, setPrayerState, type PrayerName, type PrayerValue } from "../../../services/api/home";
 import { PrayerRow } from "../../../components/PrayerRow";
 import { ContributionGraph } from "../../../components/ContributionGraph";
 import { ConsistencyGraph } from "../../../components/ConsistencyGraph";
@@ -13,7 +13,8 @@ export default function HomeScreen() {
   const { data, isLoading, isError } = useQuery({ queryKey: ["home"], queryFn: fetchHome });
 
   const mutation = useMutation({
-    mutationFn: (prayer: PrayerName) => setPrayerState(data!.today.prayer_date, prayer),
+    mutationFn: ({ prayer, value }: { prayer: PrayerName; value: PrayerValue }) =>
+      setPrayerState(data!.today.prayer_date, prayer, value),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["home"] }),
   });
 
@@ -46,10 +47,10 @@ export default function HomeScreen() {
             name={prayer}
             value={data.today[prayer]}
             onPress={() => {
-              // Tap an unrecorded prayer -> prayed. Undo/change while
-              // editable is a later iteration (route only supports
-              // setting to prayed right now).
-              if (data.today[prayer] !== 1) mutation.mutate(prayer);
+              // Tap unrecorded -> prayed. Tap already-prayed -> undo
+              // (back to pending), per PRD #3.
+              const nextValue: PrayerValue = data.today[prayer] === 1 ? null : 1;
+              mutation.mutate({ prayer, value: nextValue });
             }}
           />
         ))}

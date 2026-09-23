@@ -22,8 +22,11 @@ export function fetchHome(): Promise<HomeData> {
   return apiFetch<HomeData>("/api/home");
 }
 
-export function setPrayerState(date: string, prayer: PrayerName): Promise<PrayerDay> {
-  return apiFetch<PrayerDay>(`/api/prayer-days/${date}/${prayer}`, { method: "PUT" });
+export function setPrayerState(date: string, prayer: PrayerName, value?: PrayerValue): Promise<PrayerDay> {
+  if (value === undefined) {
+    return apiFetch<PrayerDay>(`/api/prayer-days/${date}/${prayer}`, { method: "PUT" });
+  }
+  return apiFetch<PrayerDay>(`/api/prayer-days/${date}/${prayer}`, { method: "PUT", body: { value } });
 }
 
 export function setDayExempt(date: string): Promise<PrayerDay> {
