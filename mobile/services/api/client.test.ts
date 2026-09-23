@@ -47,6 +47,20 @@ describe("apiFetch", () => {
     await expect(apiFetch("/api/home")).rejects.toBeInstanceOf(ApiError);
   });
 
+  test("returns undefined for a 204 No Content response instead of parsing JSON", async () => {
+    (session.getSessionToken as jest.Mock).mockResolvedValue("t");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      json: async () => {
+        throw new Error("should not be called on 204");
+      },
+    });
+
+    const result = await apiFetch("/api/me");
+    expect(result).toBeUndefined();
+  });
+
   test("sends JSON content-type and stringifies body when body is given", async () => {
     (session.getSessionToken as jest.Mock).mockResolvedValue("t");
     mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
