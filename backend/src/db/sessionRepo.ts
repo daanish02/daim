@@ -23,3 +23,7 @@ export async function findUserIdBySessionHash(db: D1Database, idHash: string): P
   if (new Date(row.expires_at).getTime() <= Date.now()) return null;
   return row.user_id;
 }
+
+export async function deleteSessionByHash(db: D1Database, idHash: string): Promise<void> {
+  await db.prepare("DELETE FROM sessions WHERE id_hash = ?").bind(idHash).run();
+}

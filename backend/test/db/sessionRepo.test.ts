@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { env } from "cloudflare:test";
 import { ensureMigrated } from "../helpers/migrate";
 import { upsertUserByGoogleId } from "../../src/db/userRepo";
-import { createSession, findUserIdBySessionHash } from "../../src/db/sessionRepo";
+import { createSession, findUserIdBySessionHash, deleteSessionByHash } from "../../src/db/sessionRepo";
 
 beforeEach(async () => {
   await ensureMigrated(env.DB);
@@ -29,5 +29,17 @@ describe("createSession / findUserIdBySessionHash", () => {
     await createSession(env.DB, { idHash: "hash-expired", userId: user.id, expiresAt });
 
     expect(await findUserIdBySessionHash(env.DB, "hash-expired")).toBeNull();
+  });
+});
+
+describe("deleteSessionByHash", () => {
+  test("removes the session; it no longer resolves", async () => {
+    const user = await upsertUserByGoogleId(env.DB, { googleId: "g-3", displayName: "Cam", timezone: "UTC" });
+    const expiresAt = new Date(Date.now() + 3600_000).toISOString();
+    await createSession(env.DB, { idHash: "hash-logout", userId: user.id, expiresAt });
+
+    await deleteSessionByHash(env.DB, "hash-logout");
+
+    expect(await findUserIdBySessionHash(env.DB, "hash-logout")).toBeNull();
   });
 });
