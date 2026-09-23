@@ -26,6 +26,11 @@ export async function findUserByGoogleId(db: D1Database, googleId: string): Prom
   return row ?? null;
 }
 
+export async function findUserById(db: D1Database, id: string): Promise<User | null> {
+  const row = await db.prepare("SELECT * FROM users WHERE id = ?").bind(id).first<User>();
+  return row ?? null;
+}
+
 /**
  * Create the user on first Google sign-in, or refresh display_name on
  * repeat sign-in. Identity (google_id) never changes once created.
