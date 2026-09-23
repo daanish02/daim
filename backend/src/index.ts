@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { authRoutes } from "./routes/auth";
+import { prayerDayRoutes } from "./routes/prayerDays";
+import { authMiddleware, type AuthEnv } from "./middleware/auth";
 
 export interface Env {
   DB: D1Database;
@@ -7,10 +9,12 @@ export interface Env {
   GOOGLE_CLIENT_ID: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AuthEnv>();
 
 app.get("/health", (c) => c.json({ ok: true }));
 app.route("/api/auth", authRoutes);
+app.use("/api/prayer-days/*", authMiddleware);
+app.route("/api/prayer-days", prayerDayRoutes);
 
 export default {
   fetch: app.fetch,
