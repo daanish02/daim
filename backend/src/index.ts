@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { authRoutes } from "./routes/auth";
 import { prayerDayRoutes } from "./routes/prayerDays";
+import { homeRoutes } from "./routes/home";
 import { authMiddleware, type AuthEnv } from "./middleware/auth";
 
 export interface Env {
@@ -15,6 +16,8 @@ app.get("/health", (c) => c.json({ ok: true }));
 app.route("/api/auth", authRoutes);
 app.use("/api/prayer-days/*", authMiddleware);
 app.route("/api/prayer-days", prayerDayRoutes);
+app.use("/api/home", authMiddleware);
+app.route("/api/home", homeRoutes);
 
 export default {
   fetch: app.fetch,
