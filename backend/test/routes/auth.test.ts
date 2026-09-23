@@ -83,3 +83,29 @@ describe("POST /api/auth/google", () => {
     expect(secondBody.session_token).not.toBe(firstBody.session_token);
   });
 });
+
+describe("POST /api/auth/logout", () => {
+  test("204s and invalidates the session token", async () => {
+    const app = buildApp(async () => ({ sub: "google-sub-3", email: "cam@gmail.com", name: "Cam" }));
+
+    const signIn = await app.request(
+      "/api/auth/google",
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id_token: "t", timezone: "UTC" }) },
+      env,
+    );
+    const { session_token } = await signIn.json<{ session_token: string }>();
+
+    const res = await app.request(
+      "/api/auth/logout",
+      { method: "POST", headers: { Authorization: `Bearer ${session_token}` } },
+      env,
+    );
+    expect(res.status).toBe(204);
+  });
+
+  test("204s even with no Authorization header (idempotent)", async () => {
+    const app = buildApp(async () => ({ sub: "x", email: "x", name: "x" }));
+    const res = await app.request("/api/auth/logout", { method: "POST" }, env);
+    expect(res.status).toBe(204);
+  });
+});

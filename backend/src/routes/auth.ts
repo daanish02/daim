@@ -4,7 +4,7 @@ import type { GoogleClaims } from "../auth/google";
 import { verifyGoogleIdToken as defaultVerifyGoogleIdToken } from "../auth/google";
 import { generateSessionToken, hashSessionToken } from "../auth/session";
 import { upsertUserByGoogleId } from "../db/userRepo";
-import { createSession } from "../db/sessionRepo";
+import { createSession, deleteSessionByHash } from "../db/sessionRepo";
 
 const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -41,6 +41,15 @@ export function buildAuthRoutes(deps: AuthRoutesDeps = { verifyGoogleIdToken: de
     await createSession(c.env.DB, { idHash, userId: user.id, expiresAt });
 
     return c.json({ session_token: token, user });
+  });
+
+  routes.post("/logout", async (c) => {
+    const header = c.req.header("Authorization");
+    const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : null;
+    if (token) {
+      await deleteSessionByHash(c.env.DB, await hashSessionToken(token));
+    }
+    return c.body(null, 204);
   });
 
   return routes;
