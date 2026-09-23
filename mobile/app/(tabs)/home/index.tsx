@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchHome, setPrayerState, type PrayerName, type PrayerValue } from "../../../services/api/home";
 import { PrayerRow } from "../../../components/PrayerRow";
@@ -9,6 +10,7 @@ import { colors, spacing } from "../../../theme/tokens";
 const PRAYER_NAMES: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
 export default function HomeScreen() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading, isError } = useQuery({ queryKey: ["home"], queryFn: fetchHome });
 
@@ -38,7 +40,12 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Today</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading}>Today</Text>
+        <Pressable onPress={() => router.push("/settings")} accessibilityRole="button" accessibilityLabel="Settings">
+          <Text style={styles.settingsIcon}>⚙</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.prayerList}>
         {PRAYER_NAMES.map((prayer) => (
@@ -87,11 +94,20 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 16,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
   heading: {
     fontSize: 24,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.md,
+  },
+  settingsIcon: {
+    fontSize: 22,
+    color: colors.muted,
   },
   prayerList: {
     marginBottom: spacing.md,
