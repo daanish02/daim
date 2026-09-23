@@ -5,6 +5,7 @@ import { homeRoutes } from "./routes/home";
 import { leaderboardRoutes } from "./routes/leaderboard";
 import { meRoutes } from "./routes/me";
 import { authMiddleware, type AuthEnv } from "./middleware/auth";
+import { runDeadlineSweep } from "./cron/deadlineSweep";
 
 export interface Env {
   DB: D1Database;
@@ -27,7 +28,7 @@ app.route("/api/me", meRoutes);
 
 export default {
   fetch: app.fetch,
-  async scheduled(_controller: ScheduledController, _env: Env, _ctx: ExecutionContext) {
-    // deadline sweep cron - wired in a later step
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    await runDeadlineSweep(env.DB);
   },
 };
