@@ -5,6 +5,8 @@ import { homeRoutes } from "./routes/home";
 import { leaderboardRoutes } from "./routes/leaderboard";
 import { meRoutes } from "./routes/me";
 import { authMiddleware, type AuthEnv } from "./middleware/auth";
+import { adminMiddleware } from "./middleware/adminAuth";
+import { adminRoutes } from "./routes/admin";
 import { runDeadlineSweep } from "./cron/deadlineSweep";
 
 export interface Env {
@@ -25,6 +27,8 @@ app.use("/api/leaderboard", authMiddleware);
 app.route("/api/leaderboard", leaderboardRoutes);
 app.use("/api/me*", authMiddleware);
 app.route("/api/me", meRoutes);
+app.use("/api/admin/*", authMiddleware, adminMiddleware);
+app.route("/api/admin", adminRoutes);
 
 export default {
   fetch: app.fetch,
