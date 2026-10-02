@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.daim.app",
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -39,10 +40,11 @@
       "expo-router",
       "expo-status-bar",
       "expo-secure-store",
-      "expo-web-browser"
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
-      "googleClientId": "10145223556-ehd33p51dvoharcut4us1s48554v1bm2.apps.googleusercontent.com"
+      "googleClientId": "10145223556-ehd33p51dvoharcut4us1s48554v1bm2.apps.googleusercontent.com",
+      "googleWebClientId": "10145223556-vacjevvqcvb2ai3epm47fnsqv9e4qqv1.apps.googleusercontent.com"
     }
   }
 }

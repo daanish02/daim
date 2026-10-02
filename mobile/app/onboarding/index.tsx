@@ -1,13 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { useGoogleAuthRequest, signInWithGoogle } from "../../services/auth/googleSignIn";
+import { configureGoogleSignIn, signInWithGoogle } from "../../services/auth/googleSignIn";
 import { setSessionToken } from "../../services/auth/session";
 import { apiFetch } from "../../services/api/client";
 import { colors, spacing, radii } from "../../theme/tokens";
-
-WebBrowser.maybeCompleteAuthSession();
 
 interface GoogleAuthResponse {
   session_token: string;
@@ -18,16 +15,18 @@ type ErrorKind = "network" | "auth" | null;
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [request, , promptAsync] = useGoogleAuthRequest();
   const [loading, setLoading] = useState(false);
   const [errorKind, setErrorKind] = useState<ErrorKind>(null);
 
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
+
   const handleSignIn = async () => {
-    if (!request) return;
     setLoading(true);
     setErrorKind(null);
 
-    const result = await signInWithGoogle(() => promptAsync());
+    const result = await signInWithGoogle();
 
     if (result.type === "cancelled") {
       setLoading(false);
@@ -35,7 +34,7 @@ export default function OnboardingScreen() {
     }
     if (result.type === "error") {
       setLoading(false);
-      setErrorKind("network");
+      setErrorKind("auth");
       return;
     }
 
@@ -70,7 +69,7 @@ export default function OnboardingScreen() {
       <Pressable
         style={styles.button}
         onPress={handleSignIn}
-        disabled={!request || loading}
+        disabled={loading}
         accessibilityRole="button"
       >
         {loading ? (
