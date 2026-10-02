@@ -45,7 +45,7 @@ export function useGoogleAuthRequest() {
     {
       clientId: clientId ?? "",
       scopes: ["openid", "profile", "email"],
-      redirectUri: AuthSession.makeRedirectUri({ scheme: "daim" }),
+      redirectUri: AuthSession.makeRedirectUri({ useProxy: true }),
       responseType: AuthSession.ResponseType.IdToken,
       usePKCE: false,
     },
