@@ -14,23 +14,28 @@ interface GoogleAuthResponse {
   user: { display_name: string };
 }
 
+type ErrorKind = "network" | "auth" | null;
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const [request, , promptAsync] = useGoogleAuthRequest();
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [loading, setLoading] = useState(false);
+  const [errorKind, setErrorKind] = useState<ErrorKind>(null);
 
   const handleSignIn = async () => {
     if (!request) return;
-    setStatus("loading");
+    setLoading(true);
+    setErrorKind(null);
 
     const result = await signInWithGoogle(() => promptAsync());
 
     if (result.type === "cancelled") {
-      setStatus("idle");
+      setLoading(false);
       return;
     }
     if (result.type === "error") {
-      setStatus("error");
+      setLoading(false);
+      setErrorKind("network");
       return;
     }
 
@@ -42,10 +47,20 @@ export default function OnboardingScreen() {
       });
       await setSessionToken(response.session_token);
       router.replace("/(tabs)/home");
-    } catch {
-      setStatus("error");
+    } catch (err: unknown) {
+      setLoading(false);
+      const isNetworkError =
+        err instanceof TypeError && err.message.toLowerCase().includes("network");
+      setErrorKind(isNetworkError ? "network" : "auth");
     }
   };
+
+  const errorMessage =
+    errorKind === "network"
+      ? "Connection failed. Check your network and try again."
+      : errorKind === "auth"
+        ? "Sign-in didn't complete. Try again."
+        : null;
 
   return (
     <View style={styles.container}>
@@ -55,17 +70,19 @@ export default function OnboardingScreen() {
       <Pressable
         style={styles.button}
         onPress={handleSignIn}
-        disabled={!request || status === "loading"}
+        disabled={!request || loading}
         accessibilityRole="button"
       >
-        {status === "loading" ? (
+        {loading ? (
           <ActivityIndicator color={colors.background} />
+        ) : errorKind ? (
+          <Text style={styles.buttonText}>Try again</Text>
         ) : (
           <Text style={styles.buttonText}>Sign in with Google</Text>
         )}
       </Pressable>
 
-      {status === "error" && <Text style={styles.error}>Couldn't sign in. Try again.</Text>}
+      {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
     </View>
   );
 }
