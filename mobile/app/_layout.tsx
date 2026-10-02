@@ -14,11 +14,12 @@ function useAuthGate() {
   const router = useRouter();
 
   useEffect(() => {
+    setChecked(false);
     getSessionToken().then((token) => {
       setAuthed(!!token);
       setChecked(true);
     });
-  }, []);
+  }, [segments]);
 
   useEffect(() => {
     if (!checked) return;
