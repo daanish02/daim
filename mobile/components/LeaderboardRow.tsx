@@ -15,23 +15,42 @@ function consistencyPct(points: number, eligible: number): number {
   return eligible > 0 ? Math.round((points / eligible) * 100) : 0;
 }
 
-/** One leaderboard row. Primary metric matches the active sort; no hidden combined score, per PRD #10. */
+const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0] ?? "")
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export function LeaderboardRow({ rank, displayName, points, eligiblePoints, sort, isMe = false }: LeaderboardRowProps) {
   const pct = consistencyPct(points, eligiblePoints);
-  const primaryMetric = sort === "points" ? `${points} points` : `${pct}%`;
+  const primaryMetric = sort === "points" ? `${points}` : `${pct}%`;
+  const primaryUnit = sort === "points" ? "pts" : "";
+  const medal = MEDALS[rank];
 
   return (
     <View testID={`leaderboard-row-${rank}`} style={[styles.row, isMe && styles.rowMe]}>
-      <Text style={styles.rank}>{rank}</Text>
-      <Text style={styles.name}>{displayName}</Text>
-      <View style={styles.metrics}>
-        <Text testID="leaderboard-row-primary-metric" style={styles.primaryMetric}>
-          {primaryMetric}
-        </Text>
-        <Text style={styles.secondaryMetric}>
-          {points} pts · {pct}%
+      <View style={[styles.avatar, isMe && styles.avatarMe]}>
+        <Text style={[styles.avatarText, isMe && styles.avatarTextMe]}>
+          {initials(displayName)}
         </Text>
       </View>
+      <Text style={styles.name} numberOfLines={1}>
+        {displayName}
+        {isMe ? " (you)" : ""}
+      </Text>
+      <View style={styles.right}>
+        <View style={styles.metricRow}>
+          <Text style={styles.primaryMetric}>{primaryMetric}</Text>
+          {primaryUnit ? <Text style={styles.unit}> {primaryUnit}</Text> : null}
+        </View>
+        <Text style={styles.secondary}>{points} pts · {pct}%</Text>
+      </View>
+      <Text style={styles.rankBadge}>{medal ?? rank}</Text>
     </View>
   );
 }
@@ -40,35 +59,67 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.sm,
+    paddingVertical: 10,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
+    borderRadius: radii.md,
     gap: spacing.sm,
+    backgroundColor: "#FFFFFF",
+    marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: "#ECEAE3",
   },
   rowMe: {
-    backgroundColor: "#EAF3EF",
+    backgroundColor: "#EBF5F0",
+    borderColor: "#A8D5C2",
   },
-  rank: {
-    width: 28,
-    fontSize: 15,
-    color: colors.muted,
-    fontWeight: "600",
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E0EDE9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarMe: {
+    backgroundColor: colors.primary,
+  },
+  avatarText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  avatarTextMe: {
+    color: "#FFFFFF",
   },
   name: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: "500",
     color: colors.text,
   },
-  metrics: {
+  right: {
     alignItems: "flex-end",
   },
-  primaryMetric: {
-    fontSize: 15,
-    color: colors.primary,
-    fontWeight: "700",
+  metricRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
-  secondaryMetric: {
+  primaryMetric: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  unit: {
     fontSize: 12,
     color: colors.muted,
+  },
+  secondary: {
+    fontSize: 11,
+    color: colors.muted,
+  },
+  rankBadge: {
+    fontSize: 18,
+    width: 28,
+    textAlign: "center",
   },
 });
